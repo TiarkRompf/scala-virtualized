@@ -6,6 +6,9 @@ trait SourceLocation {
   def charOffset: Int = 0
 
   def fileName: String = ""
+
+  override def toString: String =
+    fileName + ":" + line + ":" + charOffset
 }
 
 object SourceLocation {
