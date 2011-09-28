@@ -280,6 +280,13 @@ self =>
       finally classContextBounds = saved
     }
 
+    private var hasSourceContext = false
+    private def savingHasSourceContext[T](op: => T): T = {
+      val saved = hasSourceContext
+      try op
+      finally hasSourceContext = saved
+    }
+
     /** Are we inside the Scala package? Set for files that start with package scala
      */
     private var inScalaPackage = false
@@ -2008,7 +2015,7 @@ self =>
           case _          => syntaxError(start, "auxiliary constructor needs non-implicit parameter list", false)
         }
       }
-      addEvidenceParams(owner, result, contextBounds)
+      addEvidenceParams(owner, result, contextBounds, hasSourceContext)
     }
 
     /** ParamType ::= Type | `=>' Type | Type `*'
@@ -2446,7 +2453,7 @@ self =>
       def isTrait = mods.hasTraitFlag
 
       atPos(start, if (name == tpnme.ERROR) start else nameOffset) {
-        savingClassContextBounds {
+        savingHasSourceContext { savingClassContextBounds {
           val contextBoundBuf = new ListBuffer[Tree]
           val tparams = typeParamClauseOpt(name, contextBoundBuf)
           classContextBounds = contextBoundBuf.toList
@@ -2456,6 +2463,13 @@ self =>
             classContextBounds = List()
           }
           val constrAnnots = constructorAnnotations()
+
+          // does class/trait carry `@sourceContext` annotation?
+          hasSourceContext = constrAnnots exists {
+            case Apply(Select(New(tpt), name), args) =>
+              tpt.toString == "sourceContext"
+          }
+
           val (constrMods, vparamss) = 
             if (isTrait) (Modifiers(Flags.TRAIT), List())
             else (accessModifierOpt(), paramClauses(name, classContextBounds, mods.isCase))
@@ -2473,7 +2487,7 @@ self =>
           if (!classContextBounds.isEmpty)
             ensureNonOverlapping(template, tparams)
           result
-        }
+        } }
       }
     }
 

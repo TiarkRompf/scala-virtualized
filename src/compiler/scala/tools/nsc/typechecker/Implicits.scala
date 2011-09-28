@@ -1048,16 +1048,18 @@ trait Implicits {
         )
       }
     
+    private def methodNameOf(tree: Tree) = tree match {
+      case app @ Apply(_, _) => app.symbol.name
+      case s @ Select(_, _) => s.symbol.name
+      case _ => ""
+    }
+
     private def sourceInfo(): SearchResult = {
       def srcInfo()(implicit from: List[Symbol] = List(), to: List[Type] = List()): SearchResult = {
         implicit def wrapResult(tree: Tree): SearchResult = 
           if (tree == EmptyTree) SearchFailure else new SearchResult(tree, new TreeTypeSubstituter(from, to))
         
-        val methodName = tree match {
-          case Apply(TypeApply(s, _), args) => s.symbol.name
-          case Apply(s@Select(_, _), args) => s.symbol.name
-          case _ => ""
-        }
+        val methodName = methodNameOf(tree)
         
         //println("context source info chain:")
         //println(contextInfoChain)
@@ -1264,12 +1266,7 @@ trait Implicits {
           val position = tree.pos.focus
           val fileName = if (position.isDefined) position.source.file.absolute.path
                          else "<unknown file>"
-          val methodName = tree match {
-            case Apply(TypeApply(s, _), args) => s.symbol.name
-            case Apply(s@Select(_, _), args) => s.symbol.name
-            case Apply(s@Ident(_), args) => s.symbol.name
-            case _ => ""
-          }
+          val methodName = methodNameOf(tree)
           new SearchResult(typedPos(position) {
             // use sourceInfoFactoryCall to construct SourceContext
             Apply(Select(result.tree, "update"), List(sourceInfoFactoryCall("apply", Literal(fileName), Literal(methodName.toString), sourceInfoTree(contextInfoChain))))

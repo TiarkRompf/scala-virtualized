@@ -610,8 +610,8 @@ abstract class TreeBuilder {
     AppliedTypeTree(rootScalaDot(newTypeName("Function" + argtpes.length)), argtpes ::: List(restpe))
 
   /** Append implicit parameter section if `contextBounds' nonempty */
-  def addEvidenceParams(owner: Name, vparamss: List[List[ValDef]], contextBounds: List[Tree]): List[List[ValDef]] =
-    if (contextBounds.isEmpty) vparamss
+  def addEvidenceParams(owner: Name, vparamss: List[List[ValDef]], contextBounds: List[Tree], hasSourceContext: Boolean = false): List[List[ValDef]] = {
+    val res = if (contextBounds.isEmpty) vparamss
     else {
       val mods = Modifiers(if (owner.isTypeName) PARAMACCESSOR | LOCAL | PRIVATE else PARAM)
       def makeEvidenceParam(tpt: Tree) = ValDef(mods | IMPLICIT, freshTermName(nme.EVIDENCE_PARAM_PREFIX), tpt, EmptyTree)
@@ -626,6 +626,22 @@ abstract class TreeBuilder {
         else
           vparamss ::: List(evidenceParams)
       }
+    }
+    if (hasSourceContext) {
+      val mods = Modifiers(PARAM)
+      val scParam = ValDef(mods | IMPLICIT, freshTermName(nme.EVIDENCE_PARAM_PREFIX), TypeTree(TypeRef(NoPrefix, definitions.SourceContextClass, List())), EmptyTree)
+      if (res.isEmpty) {
+        List(List(scParam))
+      } else {
+        // if there is an implicit parameter section, add source context parameter to it
+        val lastParams = vparamss(vparamss.size - 1)
+        if (!lastParams.isEmpty && (lastParams(0).mods hasFlag IMPLICIT))
+          (vparamss take (vparamss.size - 1)) ::: List(lastParams ::: List(scParam))
+        else
+          vparamss ::: List(List(scParam))
+      }
+    } else
+      res
   }
 
 }
