@@ -19,7 +19,7 @@ Here is a sample `build.sbt` file for use with the Simple Build Tool (SBT):
 
     name := "My Scala-Virtualized Project"
     version := "1.0"
-    scalaVersion := "2.10.0-RC1"
+    scalaVersion := "2.10.2"
     scalaOrganization := "org.scala-lang.virtualized"
 
 Releases of Scala-Virtualized are binary compatible with the corresponding regular Scala release.
